@@ -10,7 +10,16 @@ const User = mongoose.model('User',{
     secondName:String,
     email:String,
     phone:String,
-    password:String
+    password:String,
+    profileImage:String,
+    location:String,
+    postsCount:Number,
+    followersCount:Number,
+    followingCount:Number,
+    bio:String,
+    followers:[],
+    following:[]
+    
 })
 
 module.exports={
