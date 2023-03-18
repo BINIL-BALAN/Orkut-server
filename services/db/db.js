@@ -18,10 +18,28 @@ const User = mongoose.model('User',{
     followingCount:Number,
     bio:String,
     followers:[],
-    following:[]
-    
+    following:[],
+    newMessage:[],
+    newRequests:[]
 })
 
+const Post = mongoose.model('Post',{
+    id:String,
+    firstName:String,
+    secondName:String,
+    profileImage:String,
+    postedImages:[]
+})
+
+const Miniprofile = mongoose.model('Miniprofile',{
+    id:String,
+    profileImage:String,
+    firstName:String,
+    secondName:String,
+    loaction:String
+})
 module.exports={
-    User
+    User,
+    Post,
+    Miniprofile
 }
