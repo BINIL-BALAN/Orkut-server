@@ -32,8 +32,9 @@ const userRegistration = (body) => {
                 bio: '',
                 followers: [],
                 following: [],
-                newMessage:[],
-                newRequests:[]
+                newMessage: [],
+                newRequests: [],
+                likedPost: []
             })
             newUser.save()
             return {
@@ -61,15 +62,15 @@ const userLogin = (body) => {
         }
     })
 }
-const getDetails =  (id) => {
-    
+const getDetails = (id) => {
+
     return db.User.findOne({ id }).then(async (result) => {
         if (result) {
             let post = {}
             try {
-                post = await db.Post.findOne({id})
+                post = await db.Post.findOne({ id })
             } catch (error) {
-                post = {postedImages:[]}
+                post = { postedImages: [] }
             }
             return {
                 statusCode: 200,
@@ -90,10 +91,10 @@ const updateDetails = async (body, imageurl) => {
     const imgFormats = '.jpg .png .jpeg .jfif .avif'
     try {
         const result = await db.User.findOne({ id: body.id })
-        console.log(imageurl.slice(-4));
-        console.log(imgFormats.includes(imageurl.slice(-4)));
         if (imgFormats.includes(imageurl.slice(-4))) {
             result.profileImage = imageurl
+        } else {
+            result.profileImage = result.profileImage
         }
         result.firstName = body.firstname
         result.secondName = body.secondname
@@ -111,7 +112,7 @@ const updateDetails = async (body, imageurl) => {
                 data.save()
             } else {
                 let profileImg = ''
-                if (imageurl.includes('.jpg' || '.png' || '.jpeg')) {
+                if (imgFormats.includes(imageurl.slice(-4))) {
                     profileImg = imageurl
                 }
                 const newMiniProfile = new db.Miniprofile({
@@ -169,6 +170,10 @@ const uploadPost = async (body, imageURL) => {
     try {
         const result = await db.Post.findOne({ id: body.id })
         result.postedImages.push({
+            id: body.id,
+            firstName: body.firstName,
+            secondName: body.secondName,
+            profileImage: body.profileImage,
             imageURL,
             date: getPostDate(),
             desc: body.desc,
@@ -182,10 +187,11 @@ const uploadPost = async (body, imageURL) => {
     } catch {
         const newPost = new db.Post({
             id: body.id,
-            firstName: body.firstName,
-            secondName: body.secondName,
-            profileImage: body.profileImage,
             postedImages: [{
+                id: body.id,
+                firstName: body.firstName,
+                secondName: body.secondName,
+                profileImage: body.profileImage,
                 imageURL,
                 date: getPostDate(),
                 desc: body.desc,
@@ -200,30 +206,112 @@ const uploadPost = async (body, imageURL) => {
     }
 }
 
-const deletePost =async (body)=>{
-    console.log('display result',body);
+const deletePost = async (body) => {
+    console.log('display result', body);
     try {
-        const result =await db.Post.findOne({id:body.id})
+        const result = await db.Post.findOne({ id: body.id })
         try {
-        fs.unlinkSync(body.imageUrl.slice(22,body.imageUrl.length))
-        const index = result.postedImages.indexOf(result.postedImages.find(post=>post.imageURL===body.imageUrl))
-        result.postedImages.splice(index,1)
-        result.save()
-        return{
-            statusCode:200,
-            message:'Post deleted successfully'
-        }
+            fs.unlinkSync(body.imageUrl.slice(22, body.imageUrl.length))
+            const index = result.postedImages.indexOf(result.postedImages.find(post => post.imageURL === body.imageUrl))
+            result.postedImages.splice(index, 1)
+            result.save()
+            return {
+                statusCode: 200,
+                message: 'Post deleted successfully'
+            }
         } catch (error) {
-            return{
-                statusCode:400,
-                message:"Cant't delete post"
+            return {
+                statusCode: 400,
+                message: "Cant't delete post"
             }
         }
     } catch (error) {
-          return{
-                statusCode:400,
-                message:" Cant't delete post"
+        return {
+            statusCode: 400,
+            message: " Cant't delete post"
+        }
+    }
+}
+
+
+const getFeed = async (id) => {
+    let post = []
+    let miniProfile = []
+    let userPosts = []
+    try {
+        const user = await db.User.findOne({ id })
+        try {
+            userPosts = await db.Post.findOne({ id })
+
+        } catch (error) {
+            userPosts = []
+        }
+        try {
+            miniProfile = await db.Miniprofile.find({ id: { $ne: id } })
+        } catch (error) {
+            miniProfile = []
+        }
+
+        try {
+            const result = await db.Post.find({ id: { $ne: id } })
+            const allPost = result.map(item => item.postedImages)
+            allPost.map(item => {
+                item.forEach(image => {
+                    post.push(image)
+                });
+            })
+        } catch (error) {
+            post = []
+        }
+
+        return {
+            statusCode: 200,
+            user,
+            post,
+            miniProfile,
+            userPosts
+        }
+
+    } catch (error) {
+        return {
+            statusCode: 400,
+            message: 'No data available'
+        }
+
+    }
+}
+
+const postLike = async (body) => {
+    console.log('body =>',body);
+
+    try {
+       const result = await db.User.findOne({ id: body.userId })
+        try {
+           const posts = await db.Post.findOne({ id: body.postId })
+             result.likedPost.push(body.imageUrl)
+             let index = posts.postedImages.indexOf(posts.postedImages.find(image => image.imageURL === body.imageUrl))
+            //  posts.postedImages[index].likes += 1
+             const post = posts.postedImages.splice(index,1)[0]
+             post.likes += 1
+             posts.postedImages.splice(index,0,post)
+             posts.save()
+             result.save()
+            return {
+                statusCode: 200
             }
+        } catch (error) {
+            console.log(error);
+            return {
+                statusCode: 400,
+                messagee: 'Something went wrong 1'
+            }
+        }
+        
+    } catch (error) {
+        return {
+            statusCode: 400,
+            messagee: 'Something went wrong 2'
+        }
     }
 }
 
@@ -234,5 +322,7 @@ module.exports = {
     updateDetails,
     userProfileDetails,
     uploadPost,
-    deletePost
+    deletePost,
+    getFeed,
+    postLike
 }

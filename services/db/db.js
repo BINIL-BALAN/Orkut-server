@@ -20,14 +20,12 @@ const User = mongoose.model('User',{
     followers:[],
     following:[],
     newMessage:[],
-    newRequests:[]
+    newRequests:[],
+    likedPost: []
 })
 
 const Post = mongoose.model('Post',{
     id:String,
-    firstName:String,
-    secondName:String,
-    profileImage:String,
     postedImages:[]
 })
 
