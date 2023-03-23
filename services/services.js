@@ -67,16 +67,30 @@ const getDetails = (id) => {
     return db.User.findOne({ id }).then(async (result) => {
         if (result) {
             let post = {}
+            let followers = []
+            let following = []
             try {
                 post = await db.Post.findOne({ id })
             } catch (error) {
                 post = { postedImages: [] }
             }
+            try {
+                followers = await db.Miniprofile.find({ id: { $in: result.followers } })
+            } catch (error) {
+                followers = []
+            }
+            try {
+                following = await db.Miniprofile.find({ id: { $in: result.following } })
+            } catch (error) {
+                following = []
+            }
             return {
                 statusCode: 200,
                 message: 'success',
                 user: result,
-                post
+                post,
+                followers,
+                following
             }
         } else {
             return {
@@ -141,13 +155,27 @@ const updateDetails = async (body, imageurl) => {
 const userProfileDetails = async (id) => {
     try {
         let posts = {}
+        let followers = []
+        let following = []
         const result = await db.User.findOne({ id })
         try {
             posts = await db.Post.findOne({ id })
+            try {
+                followers = await db.Miniprofile.find({ id: { $in: result.followers } })
+            } catch (error) {
+                followers = []
+            }
+            try {
+                following = await db.Miniprofile.find({ id: { $in: result.following } })
+            } catch (error) {
+                following = []
+            }
             return {
                 statusCode: 200,
                 details: result,
-                posts: posts
+                posts: posts,
+                followers,
+                following
             }
         } catch (error) {
             posts = null
@@ -238,6 +266,8 @@ const getFeed = async (id) => {
     let post = []
     let miniProfile = []
     let userPosts = []
+    let followers = []
+    let following = []
     try {
         const user = await db.User.findOne({ id })
         try {
@@ -264,12 +294,25 @@ const getFeed = async (id) => {
             post = []
         }
 
+        try {
+            followers = await db.Miniprofile.find({ id: { $in: user.followers } })
+
+        } catch (error) {
+            followers = []
+        }
+        try {
+            following = await db.Miniprofile.find({ id: { $in: user.following } })
+        } catch (error) {
+            following = []
+        }
         return {
             statusCode: 200,
             user,
             post,
             miniProfile,
-            userPosts
+            userPosts,
+            followers,
+            following
         }
 
     } catch (error) {
@@ -282,20 +325,18 @@ const getFeed = async (id) => {
 }
 
 const postLike = async (body) => {
-    console.log('body =>',body);
-
     try {
-       const result = await db.User.findOne({ id: body.userId })
+        const result = await db.User.findOne({ id: body.userId })
         try {
-           const posts = await db.Post.findOne({ id: body.postId })
-             result.likedPost.push(body.imageUrl)
-             let index = posts.postedImages.indexOf(posts.postedImages.find(image => image.imageURL === body.imageUrl))
+            const posts = await db.Post.findOne({ id: body.postId })
+            result.likedPost.push(body.imageUrl)
+            let index = posts.postedImages.indexOf(posts.postedImages.find(image => image.imageURL === body.imageUrl))
             //  posts.postedImages[index].likes += 1
-             const post = posts.postedImages.splice(index,1)[0]
-             post.likes += 1
-             posts.postedImages.splice(index,0,post)
-             posts.save()
-             result.save()
+            const post = posts.postedImages.splice(index, 1)[0]
+            post.likes += 1
+            posts.postedImages.splice(index, 0, post)
+            posts.save()
+            result.save()
             return {
                 statusCode: 200
             }
@@ -306,11 +347,69 @@ const postLike = async (body) => {
                 messagee: 'Something went wrong 1'
             }
         }
-        
+
     } catch (error) {
         return {
             statusCode: 400,
             messagee: 'Something went wrong 2'
+        }
+    }
+}
+
+const followRequest = async (body) => {
+    try {
+        const fromUser = await db.User.findOne({ id: body.fromId })
+        try {
+            const toUser = await db.User.findOne({ id: body.toId })
+            if (!fromUser.following.includes(body.toId) && !toUser.followers.includes(body.fromId)) {
+                fromUser.following.push(body.toId)
+                toUser.followers.push(body.fromId)
+                fromUser.save()
+                toUser.save()
+            }
+
+            return {
+                statusCode: 200,
+                message: 'success'
+            }
+        } catch (error) {
+            return {
+                statusCode: 400,
+                message: 'failed 1'
+            }
+        }
+    } catch (error) {
+        return {
+            statusCode: 400,
+            message: 'failed 2'
+        }
+    }
+}
+
+const unfollowRequest = async (body)=>{
+    try {
+        const fromUser = await db.User.findOne({id:body.fromId})
+        try {
+            const toUser = await db.User.findOne({id:body.toId})
+            followingIndex = fromUser.following.indexOf(fromUser.following.find(id => id === body.toId))
+            followerIndex = toUser.followers.indexOf(toUser.followers.find(id => id === body.fromId))
+            fromUser.following.splice(followingIndex,1)
+            toUser.followers.splice(followerIndex,1)
+            fromUser.save()
+            toUser.save()
+            return{
+                statusCode:200
+            }
+        } catch (error) {
+            return{
+                statusCode:400,
+                message:'request failed 1'
+            }
+        }
+    } catch (error) {
+        return{
+            statusCode:400,
+                message:'request failed 2'
         }
     }
 }
@@ -324,5 +423,7 @@ module.exports = {
     uploadPost,
     deletePost,
     getFeed,
-    postLike
+    postLike,
+    followRequest,
+    unfollowRequest
 }

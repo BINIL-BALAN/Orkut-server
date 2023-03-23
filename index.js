@@ -120,8 +120,28 @@ app.post('/post-like',(req,res)=>{
     res.status(result.statusCode).json(result)
   })
 })
+
+app.post('/follow',(req,res)=>{
+    dbServices.followRequest(req.body).then((result)=>{
+        res.status(result.statusCode).json(result)
+    })
+})
+
+app.post('/unfollow',(req,res)=>{
+    dbServices.unfollowRequest(req.body).then((result)=>{
+        res.status(result.statusCode).json(result)
+    })
+})
 // *** prot running ***
 const port = process.env.PORT || 5000
 server.listen(port, () => {
     console.log(`server started at port ${port}`)
+
+    io.on('connection',(socket)=>{
+        console.log('a user connected',socket.id)
+        socket.on('send-message',(message)=>{
+            console.log('message',message);
+            socket.broadcast.emit('receive-message',message)
+        })
+    })
 })
