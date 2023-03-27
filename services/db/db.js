@@ -36,8 +36,15 @@ const Miniprofile = mongoose.model('Miniprofile',{
     secondName:String,
     loaction:String
 })
+
+const Message = mongoose.model('Message',{
+    id:String,
+    chats:[]
+})
+
 module.exports={
     User,
     Post,
-    Miniprofile
+    Miniprofile,
+    Message
 }

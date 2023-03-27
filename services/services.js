@@ -139,6 +139,7 @@ const updateDetails = async (body, imageurl) => {
                 newMiniProfile.save()
             }
         })
+
         result.save()
         return {
             statusCode: 200,
@@ -331,7 +332,6 @@ const postLike = async (body) => {
             const posts = await db.Post.findOne({ id: body.postId })
             result.likedPost.push(body.imageUrl)
             let index = posts.postedImages.indexOf(posts.postedImages.find(image => image.imageURL === body.imageUrl))
-            //  posts.postedImages[index].likes += 1
             const post = posts.postedImages.splice(index, 1)[0]
             post.likes += 1
             posts.postedImages.splice(index, 0, post)
@@ -386,34 +386,112 @@ const followRequest = async (body) => {
     }
 }
 
-const unfollowRequest = async (body)=>{
+const unfollowRequest = async (body) => {
     try {
-        const fromUser = await db.User.findOne({id:body.fromId})
+        const fromUser = await db.User.findOne({ id: body.fromId })
         try {
-            const toUser = await db.User.findOne({id:body.toId})
+            const toUser = await db.User.findOne({ id: body.toId })
             followingIndex = fromUser.following.indexOf(fromUser.following.find(id => id === body.toId))
             followerIndex = toUser.followers.indexOf(toUser.followers.find(id => id === body.fromId))
-            fromUser.following.splice(followingIndex,1)
-            toUser.followers.splice(followerIndex,1)
+            fromUser.following.splice(followingIndex, 1)
+            toUser.followers.splice(followerIndex, 1)
             fromUser.save()
             toUser.save()
-            return{
-                statusCode:200
+            return {
+                statusCode: 200
             }
         } catch (error) {
-            return{
-                statusCode:400,
-                message:'request failed 1'
+            return {
+                statusCode: 400,
+                message: 'request failed 1'
             }
         }
     } catch (error) {
-        return{
-            statusCode:400,
-                message:'request failed 2'
+        return {
+            statusCode: 400,
+            message: 'request failed 2'
         }
     }
 }
+const messageService = async (id) => {
+    try {
+        const result = await db.User.findOne({ id })
+        let allContact = result.followers.concat(result.following)
+        let contactsId = allContact.filter((contact, index) => allContact.indexOf(contact) === index)
+        try {
+            let allMessages = []
+            const contacts = await db.Miniprofile.find({ id: { $in: contactsId } })
+            try {
+                const userMessages = await db.Message.findOne({id})
+                allMessages = userMessages.chats
+            } catch (error) {
+                const chats = []
+                contacts.forEach(user =>{
+                    chats.push({
+                        id:user.id,
+                        messages:[]
+                    })
+                })
+              const newMessages = new db.Message({
+                 id,
+                 chats
+              })
+              newMessages.save()
+            }
+            return {
+                statusCode:200,
+                contacts,
+                allMessages
+            }
+        } catch (error) {
+          return {
+            statusCode:400
+          }
+        }
+    } catch (error) {
+            return{
+                statusCode:400
+            }
+    }
+}
 
+const savingMessage = async (fromId,toId,message) =>{
+      try {
+        const toUser = await db.Message.findOne({id:toId})
+        try {
+         const fromUser = await db.Message.findOne({id:fromId})
+         let toIndex = toUser.chats.indexOf(toUser.chats.find(user=> user.id === fromId))
+         let touser = toUser.chats.splice(toIndex,1)[0]
+         touser.messages.push({
+            send:false,
+            message
+         })
+         toUser.chats.splice(toIndex,0,touser)
+         
+         let index = fromUser.chats.indexOf(fromUser.chats.find(user=> user.id === toId))
+         let user = fromUser.chats.splice(index,1)[0]
+         user.messages.push({
+            send:true,
+            message
+         })
+         fromUser.chats.splice(index,0,user)
+         toUser.save()
+         fromUser.save()
+         return{
+            send:false,
+            message
+         }
+        } catch (error) {
+           return{
+              message:'Cant message to this user'
+           }
+        }
+      } catch (error) {
+        return{
+            message:'Cant message to this user'
+         }
+      }
+}
 module.exports = {
     userRegistration,
     userLogin,
@@ -425,5 +503,16 @@ module.exports = {
     getFeed,
     postLike,
     followRequest,
-    unfollowRequest
+    unfollowRequest,
+    messageService,
+    savingMessage
 }
+
+// toUser.chats.find(user=> user.id === fromId).messages.push({
+//     send:false,
+//     message
+// })
+// fromUser.chats.find(user=> user.id === toId).messages.push({
+//     send:true,
+//     message
+// })

@@ -12,16 +12,15 @@ const multer = require('multer')
 app.use('/uploads', express.static('uploads'))
 app.use(express.json())
 const io = require('socket.io')(server, {
-    cors: {
-        origin: ['http://localhost:3000']
-    }
+    cors: {}
 });
-//http://localhost:3000
-app.use(express.json())
-app.use(cors({
-    origin: 'http://localhost:3000'
-}))
 
+app.use(express.json())
+app.use(cors())
+
+app.get('/hello',(req,res)=>{
+    res.send('hello')
+})
 //*** register ***
 app.post('/register', (req, res) => {
     dbServices.userRegistration(req.body).then((result) => {
@@ -132,16 +131,46 @@ app.post('/unfollow',(req,res)=>{
         res.status(result.statusCode).json(result)
     })
 })
+
+app.get('/contacts/:id',(req,res)=>{
+    const id = req.params.id
+    dbServices.messageService(id).then((result)=>{
+        res.status(result.statusCode).json(result)
+    })
+})
 // *** prot running ***
 const port = process.env.PORT || 5000
-server.listen(port, () => {
+server.listen(port,process.env.LAN_IP,() => {
     console.log(`server started at port ${port}`)
-
     io.on('connection',(socket)=>{
-        console.log('a user connected',socket.id)
-        socket.on('send-message',(message)=>{
-            console.log('message',message);
-            socket.broadcast.emit('receive-message',message)
+        socket.on('send-message',(messageBody,key)=>{
+            console.log('message',messageBody);
+            console.log('key',key)
+            if(key === ''){
+                socket.broadcast.emit('receive-message',messageBody)
+            }else{
+                dbServices.savingMessage(messageBody.from,messageBody.to,messageBody.message).then((result)=>{
+                     socket.to(key).emit('receive-message',messageBody)
+                })
+                
+            }
+            
+        })
+        socket.on('join',(key)=>{
+            // console.log('inside join',key);
+            socket.join(key)
+            socket.broadcast.emit('join-key',key)
         })
     })
 })
+
+
+// app.use(cors({
+//     origin: 'http://localhost:3000'
+// }))
+
+// const io = require('socket.io')(server, {
+//     cors: {
+//         origin: ['http://localhost:3000']
+//     }
+// });
