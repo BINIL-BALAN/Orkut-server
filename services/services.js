@@ -422,75 +422,102 @@ const messageService = async (id) => {
             let allMessages = []
             const contacts = await db.Miniprofile.find({ id: { $in: contactsId } })
             try {
-                const userMessages = await db.Message.findOne({id})
+                const userMessages = await db.Message.findOne({ id })
                 allMessages = userMessages.chats
             } catch (error) {
                 const chats = []
-                contacts.forEach(user =>{
+                contacts.forEach(user => {
                     chats.push({
-                        id:user.id,
-                        messages:[]
+                        id: user.id,
+                        messages: []
                     })
                 })
-              const newMessages = new db.Message({
-                 id,
-                 chats
-              })
-              newMessages.save()
+                const newMessages = new db.Message({
+                    id,
+                    chats
+                })
+                newMessages.save()
             }
             return {
-                statusCode:200,
+                statusCode: 200,
                 contacts,
                 allMessages
             }
         } catch (error) {
-          return {
-            statusCode:400
-          }
+            return {
+                statusCode: 400
+            }
         }
     } catch (error) {
-            return{
-                statusCode:400
-            }
+        return {
+            statusCode: 400
+        }
     }
 }
 
-const savingMessage = async (fromId,toId,message) =>{
-      try {
-        const toUser = await db.Message.findOne({id:toId})
+const savingMessage = async (fromId, toId, message) => {
+    try {
+        const toUser = await db.Message.findOne({ id: toId })
         try {
-         const fromUser = await db.Message.findOne({id:fromId})
-         let toIndex = toUser.chats.indexOf(toUser.chats.find(user=> user.id === fromId))
-         let touser = toUser.chats.splice(toIndex,1)[0]
-         touser.messages.push({
-            send:false,
-            message
-         })
-         toUser.chats.splice(toIndex,0,touser)
-         
-         let index = fromUser.chats.indexOf(fromUser.chats.find(user=> user.id === toId))
-         let user = fromUser.chats.splice(index,1)[0]
-         user.messages.push({
-            send:true,
-            message
-         })
-         fromUser.chats.splice(index,0,user)
-         toUser.save()
-         fromUser.save()
-         return{
-            send:false,
-            message
-         }
+            const fromUser = await db.Message.findOne({ id: fromId })
+            let toIndex = toUser.chats.indexOf(toUser.chats.find(user => user.id === fromId))
+            let touser = toUser.chats.splice(toIndex, 1)[0]
+            touser.messages.push({
+                send: false,
+                message
+            })
+            toUser.chats.splice(toIndex, 0, touser)
+
+            let index = fromUser.chats.indexOf(fromUser.chats.find(user => user.id === toId))
+            let user = fromUser.chats.splice(index, 1)[0]
+            user.messages.push({
+                send: true,
+                message
+            })
+            fromUser.chats.splice(index, 0, user)
+            toUser.save()
+            fromUser.save()
+            return {
+                message: {
+                    send: false,
+                    message
+                },
+                allMessages: toUser.chats,
+                fromId
+            }
         } catch (error) {
-           return{
-              message:'Cant message to this user'
-           }
+            return {
+                message: 'Cant message to this user'
+            }
         }
-      } catch (error) {
-        return{
-            message:'Cant message to this user'
-         }
-      }
+    } catch (error) {
+        return {
+            message: 'Cant message to this user'
+        }
+    }
+}
+
+const deleteAllchats = async (fromId, toId) => {
+
+    try {
+        const messageDetails = await db.Message.findOne({ id: fromId })
+       if(messageDetails.chats.length > 0) {
+            let index = messageDetails.chats.indexOf(messageDetails.chats.find(user => user.id === toId))
+            let chats = messageDetails.chats.splice(index, 1)[0]
+            chats.messages = []
+            messageDetails.chats.splice(index, 0, chats)
+            messageDetails.save()
+        }
+        return {
+            statusCode: 200,
+            messages: messageDetails.chats
+        }
+    } catch (error) {
+        return {
+            statusCode: 400,
+            message: 'Chats cant delete'
+        }
+    }
 }
 module.exports = {
     userRegistration,
@@ -505,7 +532,8 @@ module.exports = {
     followRequest,
     unfollowRequest,
     messageService,
-    savingMessage
+    savingMessage,
+    deleteAllchats
 }
 
 // toUser.chats.find(user=> user.id === fromId).messages.push({

@@ -138,6 +138,12 @@ app.get('/contacts/:id',(req,res)=>{
         res.status(result.statusCode).json(result)
     })
 })
+
+app.post('/delete-all-chats',(req,res)=>{
+    dbServices.deleteAllchats(req.body.fromId,req.body.toId).then((result)=>{
+        res.status(result.statusCode).json(result)
+    })
+})
 // *** prot running ***
 const port = process.env.PORT || 5000
 server.listen(port,process.env.LAN_IP,() => {
@@ -150,7 +156,7 @@ server.listen(port,process.env.LAN_IP,() => {
                 socket.broadcast.emit('receive-message',messageBody)
             }else{
                 dbServices.savingMessage(messageBody.from,messageBody.to,messageBody.message).then((result)=>{
-                     socket.to(key).emit('receive-message',messageBody)
+                     socket.to(key).emit('receive-message',result.message,result.allMessages,result.fromId)
                 })
                 
             }

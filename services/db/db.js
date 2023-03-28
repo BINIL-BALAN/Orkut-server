@@ -41,10 +41,13 @@ const Message = mongoose.model('Message',{
     id:String,
     chats:[]
 })
-
+const Connectionkey = mongoose.model('Connectionkey',{
+    key:String
+})
 module.exports={
     User,
     Post,
     Miniprofile,
-    Message
+    Message,
+    Connectionkey
 }
