@@ -47,8 +47,19 @@ const userRegistration = (body) => {
 }
 
 const userLogin = (body) => {
-    return db.User.findOne({ email: body.email, password: body.password }).then((result) => {
+    return db.User.findOne({ email: body.email, password: body.password }).then(async (result) => {
         if (result) {
+        try {
+            const miniProfile = await db.Miniprofile.findOne({id:result.id}) 
+            miniProfile.online = true
+            miniProfile.save()
+        } catch (error) {
+            return {
+                statusCode: 200,
+                message: 'success',
+                user: result
+            }
+        }
             return {
                 statusCode: 200,
                 message: 'success',
@@ -120,9 +131,10 @@ const updateDetails = async (body, imageurl) => {
                 if (imageurl.includes('.jpg' || '.png' || '.jpeg')) {
                     data.profileImage = imageurl
                 }
-                data.firstName = body.firstname,
+                    data.firstName = body.firstname,
                     data.secondName = body.secondname,
-                    data.loaction = body.location
+                    data.loaction = body.location,
+                    data.online = true
                 data.save()
             } else {
                 let profileImg = ''
@@ -134,7 +146,8 @@ const updateDetails = async (body, imageurl) => {
                     profileImage: profileImg,
                     firstName: body.firstname,
                     secondName: body.secondname,
-                    loaction: body.location
+                    loaction: body.location,
+                    online:true
                 })
                 newMiniProfile.save()
             }
@@ -519,6 +532,22 @@ const deleteAllchats = async (fromId, toId) => {
         }
     }
 }
+
+const logout = async (id) =>{
+  try {
+   const result = await db.Miniprofile.findOne({id})
+   result.online = false
+   result.save()
+   return{
+    statusCode:200
+}
+  } catch (error) {
+    return{
+        statusCode:400,
+        message:'operation failed'
+    }
+  }
+}
 module.exports = {
     userRegistration,
     userLogin,
@@ -533,7 +562,8 @@ module.exports = {
     unfollowRequest,
     messageService,
     savingMessage,
-    deleteAllchats
+    deleteAllchats,
+    logout
 }
 
 // toUser.chats.find(user=> user.id === fromId).messages.push({

@@ -34,7 +34,8 @@ const Miniprofile = mongoose.model('Miniprofile',{
     profileImage:String,
     firstName:String,
     secondName:String,
-    loaction:String
+    loaction:String,
+    online:Boolean
 })
 
 const Message = mongoose.model('Message',{

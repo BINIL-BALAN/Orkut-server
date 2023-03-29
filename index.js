@@ -144,28 +144,34 @@ app.post('/delete-all-chats',(req,res)=>{
         res.status(result.statusCode).json(result)
     })
 })
+
+app.post('/logout',(req,res)=>{
+    dbServices.logout(req.body.id).then((result)=>{
+        res.status(result.statusCode).json(result)
+    })
+})
 // *** prot running ***
 const port = process.env.PORT || 5000
 server.listen(port,process.env.LAN_IP,() => {
     console.log(`server started at port ${port}`)
     io.on('connection',(socket)=>{
-        socket.on('send-message',(messageBody,key)=>{
+        socket.on('send-message',(messageBody,connectionId)=>{
             console.log('message',messageBody);
-            console.log('key',key)
-            if(key === ''){
+            console.log('key',connectionId)
+            if(connectionId === ''){
                 socket.broadcast.emit('receive-message',messageBody)
             }else{
                 dbServices.savingMessage(messageBody.from,messageBody.to,messageBody.message).then((result)=>{
-                     socket.to(key).emit('receive-message',result.message,result.allMessages,result.fromId)
+                     socket.to(connectionId).emit('receive-message',result.message,result.allMessages,result.fromId)
                 })
                 
             }
             
         })
-        socket.on('join',(key)=>{
+        socket.on('join',(key,connectionId)=>{
             // console.log('inside join',key);
-            socket.join(key)
-            socket.broadcast.emit('join-key',key)
+            socket.join(connectionId)
+            socket.broadcast.emit('join-key',key,connectionId)
         })
     })
 })
