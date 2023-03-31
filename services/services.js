@@ -49,17 +49,17 @@ const userRegistration = (body) => {
 const userLogin = (body) => {
     return db.User.findOne({ email: body.email, password: body.password }).then(async (result) => {
         if (result) {
-        try {
-            const miniProfile = await db.Miniprofile.findOne({id:result.id}) 
-            miniProfile.online = true
-            miniProfile.save()
-        } catch (error) {
-            return {
-                statusCode: 200,
-                message: 'success',
-                user: result
+            try {
+                const miniProfile = await db.Miniprofile.findOne({ id: result.id })
+                miniProfile.online = true
+                miniProfile.save()
+            } catch (error) {
+                return {
+                    statusCode: 200,
+                    message: 'success',
+                    user: result
+                }
             }
-        }
             return {
                 statusCode: 200,
                 message: 'success',
@@ -131,7 +131,7 @@ const updateDetails = async (body, imageurl) => {
                 if (imageurl.includes('.jpg' || '.png' || '.jpeg')) {
                     data.profileImage = imageurl
                 }
-                    data.firstName = body.firstname,
+                data.firstName = body.firstname,
                     data.secondName = body.secondname,
                     data.loaction = body.location,
                     data.online = true
@@ -147,7 +147,7 @@ const updateDetails = async (body, imageurl) => {
                     firstName: body.firstname,
                     secondName: body.secondname,
                     loaction: body.location,
-                    online:true
+                    online: true
                 })
                 newMiniProfile.save()
             }
@@ -427,6 +427,7 @@ const unfollowRequest = async (body) => {
     }
 }
 const messageService = async (id) => {
+    console.log('inside message service')
     try {
         const result = await db.User.findOne({ id })
         let allContact = result.followers.concat(result.following)
@@ -454,7 +455,8 @@ const messageService = async (id) => {
             return {
                 statusCode: 200,
                 contacts,
-                allMessages
+                allMessages,
+                newMessage: result.newMessage
             }
         } catch (error) {
             return {
@@ -469,6 +471,7 @@ const messageService = async (id) => {
 }
 
 const savingMessage = async (fromId, toId, message) => {
+    console.log('inside save message')
     try {
         const toUser = await db.Message.findOne({ id: toId })
         try {
@@ -510,11 +513,73 @@ const savingMessage = async (fromId, toId, message) => {
     }
 }
 
-const deleteAllchats = async (fromId, toId) => {
+const newMessage = async (fromId, toId, message) => {
+    console.log('inside new message')
+    try {
+        const user = await db.User.findOne({ id: toId })
+        // console.log('before',user.newMessage);
+        let chat = {}
+        if (user.newMessage.includes(chat = user.newMessage.find(user => user.id === fromId))) {
+            let index = user.newMessage.indexOf(chat)
+            let newMsgs = user.newMessage
+            let chatObj = newMsgs.splice(index, 1)[0]
+            chatObj.message.push(message)
+            newMsgs.splice(index,0,chatObj)
+            console.log(newMsgs)
+            user.newMessage = newMsgs
+        } else {
+            const msg = [message]
+            user.newMessage.push({
+                id: fromId,
+                message: msg
+            })
+        } 
+        user.save()  
+        return user.newMessage
+    } catch (error) {
+        console.log('error 1',error);
+        return []
+    }
+}
 
+const clearNewMessageServices = async (id) =>{
+    console.log('inside clearNewMessageServices')
+    try{
+       const result = await clearNewMessage(id)
+       return result
+    }catch(error){
+        console.log('clearNewMessageServices error', error);
+        return []
+    }
+}
+
+const clearNewMessage = async (id) => {
+    console.log('inside new clear message')
+    let fromId = id.slice(0, 21)
+    let toId = id.slice(21, 44)
+    try {
+        const user = await db.User.findOne({ id: fromId })
+        if (user.newMessage.length > 0) {
+           if(user.newMessage.includes(user.newMessage.find(user => user.id === toId))){
+            let index = user.newMessage.indexOf(user.newMessage.find(user => user.id === toId))
+            let newMsg = user.newMessage
+            newMsg.splice(index, 1)
+            user.newMessage=newMsg
+            user.save()
+           }
+        }
+        return user.newMessage
+    } catch (error) {
+        console.log('clear new message error', error);
+        return
+    }
+}
+
+const deleteAllchats = async (fromId, toId) => {
+    console.log('inside delete all mesage')
     try {
         const messageDetails = await db.Message.findOne({ id: fromId })
-       if(messageDetails.chats.length > 0) {
+        if (messageDetails.chats.length > 0) {
             let index = messageDetails.chats.indexOf(messageDetails.chats.find(user => user.id === toId))
             let chats = messageDetails.chats.splice(index, 1)[0]
             chats.messages = []
@@ -533,20 +598,20 @@ const deleteAllchats = async (fromId, toId) => {
     }
 }
 
-const logout = async (id) =>{
-  try {
-   const result = await db.Miniprofile.findOne({id})
-   result.online = false
-   result.save()
-   return{
-    statusCode:200
-}
-  } catch (error) {
-    return{
-        statusCode:400,
-        message:'operation failed'
+const logout = async (id) => {
+    try {
+        const result = await db.Miniprofile.findOne({ id })
+        result.online = false
+        result.save()
+        return {
+            statusCode: 200
+        }
+    } catch (error) {
+        return {
+            statusCode: 400,
+            message: 'operation failed'
+        }
     }
-  }
 }
 module.exports = {
     userRegistration,
@@ -563,6 +628,8 @@ module.exports = {
     messageService,
     savingMessage,
     deleteAllchats,
+    clearNewMessageServices,
+    newMessage,
     logout
 }
 
@@ -574,3 +641,23 @@ module.exports = {
 //     send:true,
 //     message
 // })
+
+
+// console.log('before',user.newMessage);
+// let chat = {}
+// if (user.newMessage.includes(chat = user.newMessage.find(user => user.id === fromId))) {
+//     let index = user.newMessage.indexOf(chat)
+//     let newMsgs = user.newMessage
+//     let chatObj = newMsgs.splice(index, 1)[0]
+//     chatObj.message.push(message)
+//     newMsgs.splice(index,0,chatObj)
+//     console.log(newMsgs)
+//     user.newMessage = newMsgs
+// } else {
+//     const msg = [message]
+//     user.newMessage.push({
+//         id: fromId,
+//         message: msg
+//     })
+// } 
+// // user.save()  

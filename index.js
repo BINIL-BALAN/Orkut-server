@@ -156,22 +156,28 @@ server.listen(port,process.env.LAN_IP,() => {
     console.log(`server started at port ${port}`)
     io.on('connection',(socket)=>{
         socket.on('send-message',(messageBody,connectionId)=>{
-            console.log('message',messageBody);
-            console.log('key',connectionId)
+              dbServices.newMessage(messageBody.from,messageBody.to,messageBody.message).then((result)=>{
+                socket.to(connectionId.slice(21,44)).emit('get-newChats',result)
+              })
             if(connectionId === ''){
                 socket.broadcast.emit('receive-message',messageBody)
             }else{
                 dbServices.savingMessage(messageBody.from,messageBody.to,messageBody.message).then((result)=>{
-                     socket.to(connectionId).emit('receive-message',result.message,result.allMessages,result.fromId)
+                     socket.to(connectionId).emit('receive-message',result.message,result.allMessages,result.fromId,result.newMessages)
                 })
                 
             }
             
         })
         socket.on('join',(key,connectionId)=>{
-            // console.log('inside join',key);
-            socket.join(connectionId)
-            socket.broadcast.emit('join-key',key,connectionId)
+            dbServices.clearNewMessageServices(connectionId).then((result)=>{
+                console.log('result',result);
+                socket.join(connectionId)
+                socket.broadcast.emit('join-key',key,connectionId)
+            })
+        })
+        socket.on('new-messages',(id)=>{
+            socket.join(id)
         })
     })
 })
