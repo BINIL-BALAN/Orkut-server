@@ -20,7 +20,7 @@ const User = mongoose.model('User',{
     followers:[],
     following:[],
     newMessage:[],
-    newRequests:[],
+    quats:[],
     likedPost: []
 })
 
@@ -42,9 +42,7 @@ const Message = mongoose.model('Message',{
     id:String,
     chats:[]
 })
-const Connectionkey = mongoose.model('Connectionkey',{
-    key:String
-})
+
 module.exports={
     User,
     Post,
