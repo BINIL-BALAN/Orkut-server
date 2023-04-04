@@ -157,7 +157,7 @@ server.listen(port,process.env.LAN_IP,() => {
     io.on('connection',(socket)=>{
         socket.on('send-message',(messageBody,connectionId)=>{
               dbServices.newMessage(messageBody.from,messageBody.to,messageBody.message).then((result)=>{
-                socket.to(connectionId.slice(21,44)).emit('get-newChats',result)
+                socket.to(connectionId.slice(21,44)).emit('get-newChats',result,messageBody.from)
               })
             if(connectionId === ''){
                 socket.broadcast.emit('receive-message',messageBody)

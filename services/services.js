@@ -33,7 +33,7 @@ const userRegistration = (body) => {
                 followers: [],
                 following: [],
                 newMessage: [],
-                newRequests: [],
+                quats: [],
                 likedPost: []
             })
             newUser.save()
